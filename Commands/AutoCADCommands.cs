@@ -1,18 +1,44 @@
-﻿using Autodesk.AutoCAD.Runtime;
+﻿using System;
+using Autodesk.AutoCAD.Runtime;
 using Autodesk.AutoCAD.ApplicationServices;
 using Exercise.Views;
 using Exercise.ViewModels;
-using System;
 
-[assembly: CommandClass(typeof(Exercise.Commands.AutoCADCommands))]
+[assembly: CommandClass(typeof(Exercise.Commands.AppCommands))]
 
 namespace Exercise.Commands
 {
-    public class AutoCADCommands
+    public class AppCommands : IExtensionApplication
     {
         private static Window1 _window;
 
-        [CommandMethod("VE_MLEADER")] 
+        #region IExtensionApplication Members
+
+        public void Initialize()
+        {
+            var ed = Application.DocumentManager.MdiActiveDocument.Editor;
+            ed.WriteMessage("\n[Exercise] Plugin đã được khởi tạo thành công!");
+        }
+
+        public void Terminate()
+        {
+            if (_window != null)
+            {
+                _window.Close();
+            }
+        }
+
+        #endregion
+
+        #region Commands
+
+        [CommandMethod("HELLOWORLD")]
+        public void HelloWorld()
+        {
+            Application.DocumentManager.MdiActiveDocument.Editor.WriteMessage("\nHello, AutoCAD!");
+        }
+
+        [CommandMethod("VE_MLEADER")]
         public void ShowMLeaderSetup()
         {
             try
@@ -29,11 +55,16 @@ namespace Exercise.Commands
                 _window.DataContext = viewModel;
 
                 Application.ShowModelessWindow(_window);
+
+                _window.Closed += (s, e) => { _window = null; };
             }
             catch (System.Exception ex)
             {
-                Application.DocumentManager.MdiActiveDocument.Editor.WriteMessage("\nLỗi: " + ex.Message);
+                var ed = Application.DocumentManager.MdiActiveDocument.Editor;
+                ed.WriteMessage("\nLỗi khi mở giao diện: " + ex.Message);
             }
         }
+
+        #endregion
     }
 }
