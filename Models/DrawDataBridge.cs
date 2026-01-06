@@ -4,8 +4,7 @@
     {
         public static string SelectedFont { get; set; } = "Standard (Simplex)";
         public static double TextHeight { get; set; } = 2.5;
-        public static int LayerColorIndex { get; set; } = 4;
+        public static int LayerColorIndex { get; set; } = 4; 
         public static bool AlwaysShowSize { get; set; } = true;
-        public static bool ShowCustomField { get; set; } = false;
     }
 }

@@ -61,6 +61,8 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -76,13 +78,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Actions\DrawActions.cs" />
-    <Compile Include="Commands\RelayCommand.cs" />
+    <Compile Include="Commands\AutoCADCommands.cs" />
+    <Compile Include="MVVM\RelayCommand.cs" />
     <Compile Include="Models\DrawDataBridge.cs" />
     <Compile Include="ViewModels\TextSetupViewModel.cs" />
     <Compile Include="Views\Window1.xaml.cs">
       <DependentUpon>Window1.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Class1.cs" />
     <Compile Include="Models\TextSetting.cs" />
     <Page Include="Views\Window1.xaml">
       <SubType>Designer</SubType>
