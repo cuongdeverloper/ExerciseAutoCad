@@ -58,9 +58,7 @@ namespace Exercise.Commands
                 _ps.Size = new System.Drawing.Size(300, 600);
                 _ps.Dock = DockSides.Left;
 
-                // --- ĐOẠN SỬA LỖI TẠI ĐÂY ---
 
-                // 1. Khởi tạo WPF View và ViewModel bình thường
                 _view = new AttributeView();
                 _viewModel = new AttributeViewModel();
                 _view.DataContext = _viewModel;

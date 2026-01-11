@@ -64,5 +64,69 @@ namespace Exercise.Actions
                 doc.Editor.Regen(); 
             }
         }
+        // D - DELETE: Xóa Block
+        public static void DeleteBlock(ObjectId blockId)
+        {
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            using (DocumentLock loc = doc.LockDocument())
+            using (Transaction tr = doc.Database.TransactionManager.StartTransaction())
+            {
+                DBObject obj = tr.GetObject(blockId, OpenMode.ForWrite);
+                obj.Erase(true); // Lệnh xóa
+                tr.Commit();
+                doc.Editor.Regen();
+            }
+        }
+
+        // C - CREATE:
+        public static void CloneBlock(ObjectId blockId)
+        {
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Database db = doc.Database;
+
+            using (DocumentLock loc = doc.LockDocument())
+            using (Transaction tr = db.TransactionManager.StartTransaction())
+            {
+                // 1. Lấy Block gốc (ép kiểu về BlockReference để lấy được Attribute)
+                BlockReference sourceBlk = tr.GetObject(blockId, OpenMode.ForRead) as BlockReference;
+
+                if (sourceBlk != null)
+                {
+                    // 2. Clone cái "vỏ" Block (Hình dáng)
+                    BlockReference newBlk = sourceBlk.Clone() as BlockReference;
+
+                    // 3. Tạo ma trận dịch chuyển (Sang phải 500 đơn vị)
+                    // Lưu biến này để tí nữa dùng dịch chuyển cả chữ
+                    Matrix3d matrix = Matrix3d.Displacement(new Vector3d(500, 0, 0));
+                    newBlk.TransformBy(matrix);
+
+                    // 4. Đưa Block mới vào Database trước
+                    BlockTable bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead) as BlockTable;
+                    BlockTableRecord btr = tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite) as BlockTableRecord;
+
+                    btr.AppendEntity(newBlk);
+                    tr.AddNewlyCreatedDBObject(newBlk, true);
+
+                    foreach (ObjectId attId in sourceBlk.AttributeCollection)
+                    {
+                        AttributeReference att = tr.GetObject(attId, OpenMode.ForRead) as AttributeReference;
+
+                        // Clone ra attribute mới
+                        AttributeReference newAtt = att.Clone() as AttributeReference;
+
+                        // Dịch chuyển attribute mới theo cùng vị trí với Block mới
+                        newAtt.TransformBy(matrix);
+
+                        // Gắn attribute mới vào Block mới
+                        newBlk.AttributeCollection.AppendAttribute(newAtt);
+                        tr.AddNewlyCreatedDBObject(newAtt, true);
+                    }
+                    // -----------------------------------------------------
+                }
+
+                tr.Commit();
+                doc.Editor.Regen();
+            }
+        }
     }
 }

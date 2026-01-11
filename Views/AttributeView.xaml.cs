@@ -1,4 +1,4 @@
-﻿using System.Windows.Controls; // Bắt buộc phải có dòng này
+﻿using System.Windows.Controls; 
 
 namespace Exercise.Views
 {

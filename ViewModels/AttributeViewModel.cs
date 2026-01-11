@@ -16,11 +16,14 @@ namespace Exercise.ViewModels
         private ObjectId _currentBlockId;
 
         public ICommand SaveCommand { get; set; }
-
+        public ICommand DeleteCommand { get; set; } 
+        public ICommand CloneCommand { get; set; }  
         public AttributeViewModel()
         {
             AttributeList = new ObservableCollection<AttributeItem>();
             SaveCommand = new RelayCommand(ExecuteSave);
+            DeleteCommand = new RelayCommand(ExecuteDelete); 
+            CloneCommand = new RelayCommand(ExecuteClone);
         }
 
         // Hàm được gọi từ AppCommands khi chọn đối tượng
@@ -43,6 +46,22 @@ namespace Exercise.ViewModels
             if (_currentBlockId.IsNull) return;
             // Gọi Action để ghi dữ liệu
             AttributeActions.UpdateAttributes(_currentBlockId, AttributeList);
+        }
+        private void ExecuteDelete(object obj)
+        {
+            if (_currentBlockId.IsNull) return;
+
+            AttributeActions.DeleteBlock(_currentBlockId);
+
+            AttributeList.Clear();
+            _currentBlockId = ObjectId.Null;
+        }
+
+        private void ExecuteClone(object obj)
+        {
+            if (_currentBlockId.IsNull) return;
+
+            AttributeActions.CloneBlock(_currentBlockId);
         }
     }
 }
