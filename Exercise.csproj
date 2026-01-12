@@ -75,18 +75,20 @@
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Actions\DrawActions.cs" />
+    <Compile Include="Actions\AttributeActions.cs" />
     <Compile Include="Commands\AutoCADCommands.cs" />
+    <Compile Include="Models\AttributeItem.cs" />
     <Compile Include="MVVM\RelayCommand.cs" />
     <Compile Include="Models\DrawDataBridge.cs" />
-    <Compile Include="ViewModels\TextSetupViewModel.cs" />
-    <Compile Include="Views\Window1.xaml.cs">
-      <DependentUpon>Window1.xaml</DependentUpon>
+    <Compile Include="ViewModels\AttributeViewModel.cs" />
+    <Compile Include="Views\AttributeView.xaml.cs">
+      <DependentUpon>AttributeView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Models\TextSetting.cs" />
-    <Page Include="Views\Window1.xaml">
+    <Page Include="Views\AttributeView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
