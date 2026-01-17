@@ -1,80 +1,173 @@
-﻿using Autodesk.AutoCAD.Runtime;
-using Autodesk.AutoCAD.ApplicationServices;
-using Autodesk.AutoCAD.Windows;
+﻿using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
-using Exercise.Views;
+using Autodesk.AutoCAD.Geometry;
+using Autodesk.AutoCAD.Runtime;
+using Autodesk.Windows;
+using Exercise.Models;
 using Exercise.ViewModels;
-using System.Windows.Forms.Integration;
+using Exercise.Views;
+using System;
 
-[assembly: CommandClass(typeof(Exercise.Commands.AppCommands))]
+[assembly: CommandClass(typeof(Exercise.Commands.AutoCADCommands))]
 
 namespace Exercise.Commands
 {
-    public class AppCommands : IExtensionApplication
+    public class AutoCADCommands : IExtensionApplication
     {
-        private static PaletteSet _ps = null;
-        private static AttributeView _view = null;
-        private static AttributeViewModel _viewModel = null;
-
         public void Initialize()
         {
-            Document doc = Application.DocumentManager.MdiActiveDocument;
-            if (doc != null)
-            {
-                doc.Editor.WriteMessage("\n[Exercise] Plugin Edit Block Loaded!");
-                doc.Editor.SelectionAdded += OnSelectionAdded;
-            }
+            UserSession.Instance.AuthenticationChanged += OnAuthenticationChanged;
         }
 
-        public void Terminate() { }
-
-        private void OnSelectionAdded(object sender, SelectionAddedEventArgs e)
+        public void Terminate()
         {
-            if (_ps == null || !_ps.Visible) return;
+            UserSession.Instance.AuthenticationChanged -= OnAuthenticationChanged;
+        }
 
-            ObjectId[] ids = e.AddedObjects.GetObjectIds();
-            if (ids.Length == 0) return;
-
-            ObjectId id = ids[0];
-
-            using (Transaction tr = Application.DocumentManager.MdiActiveDocument.TransactionManager.StartTransaction())
+        [CommandMethod("MYLOGIN")]
+        public void ShowLoginForm()
+        {
+            if (UserSession.Instance.IsLoggedIn)
             {
-                var obj = tr.GetObject(id, OpenMode.ForRead);
-                if (obj is BlockReference)
+                Application.ShowAlertDialog("Bạn đã đăng nhập rồi!");
+                return;
+            }
+
+            var loginView = new LoginView();
+            Application.ShowModalWindow(loginView);
+        }
+
+        [CommandMethod("MYLOGOUT")]
+        public void Logout()
+        {
+            UserSession.Instance.Logout();
+            Application.ShowAlertDialog("Đã đăng xuất thành công.");
+        }
+
+        private void OnAuthenticationChanged(object sender, EventArgs e)
+        {
+            bool isLoggedIn = UserSession.Instance.IsLoggedIn;
+
+            // Tìm Ribbon Control
+            RibbonControl ribbon = ComponentManager.Ribbon;
+            if (ribbon == null) return;
+
+            string[] buttonsToEnable = { "BTN_SETTINGS", "BTN_LOADSPEC", "BTN_CHECK" };
+            string btnLoginId = "BTN_LOGIN";
+            string btnLogoutId = "BTN_LOGOUT";
+
+            foreach (var tab in ribbon.Tabs)
+            {
+                foreach (var panel in tab.Panels)
                 {
-                    _viewModel.LoadData(id);
+                    foreach (var item in panel.Source.Items)
+                    {
+                        foreach (var targetId in buttonsToEnable)
+                        {
+                            if (IsMatchingId(item, targetId)) item.IsEnabled = isLoggedIn;
+                        }
+
+                        if (IsMatchingId(item, btnLoginId)) item.IsEnabled = !isLoggedIn;
+
+                        if (IsMatchingId(item, btnLogoutId)) item.IsEnabled = isLoggedIn;
+                    }
                 }
-                tr.Commit();
             }
         }
 
-        [CommandMethod("SHOW_PANEL")]
-        public void ShowPanel()
+        private bool IsMatchingId(RibbonItem item, string targetId)
         {
-            if (_ps == null)
+            if (item.Id == targetId) return true;
+
+            if (item is RibbonRowPanel row)
             {
-                _ps = new PaletteSet("Quản Lý Block");
-                _ps.Size = new System.Drawing.Size(300, 600);
-                _ps.Dock = DockSides.Left;
-
-
-                _view = new AttributeView();
-                _viewModel = new AttributeViewModel();
-                _view.DataContext = _viewModel;
-
-                // 2. Tạo cầu nối ElementHost
-                ElementHost host = new ElementHost();
-                host.AutoSize = true;
-                host.Dock = System.Windows.Forms.DockStyle.Fill;
-                host.Child = _view; // Nhét WPF vào trong cầu nối
-
-                // 3. Thêm cầu nối vào PaletteSet (chứ không thêm trực tiếp _view)
-                _ps.Add("Attributes", host);
-
-                // -----------------------------
+                foreach (var subItem in row.Items)
+                {
+                    if (subItem.Id == targetId) return true;
+                }
             }
-            _ps.Visible = true;
+            return false;
+        }
+        [CommandMethod("MYROUTE")]
+        public void CreateRoute()
+        {
+            // 1. Kiểm tra đăng nhập (nếu cần)
+            if (!UserSession.Instance.IsLoggedIn)
+            {
+                Application.ShowAlertDialog("Bạn cần đăng nhập trước!");
+                return;
+            }
+
+            // 2. Khởi tạo ViewModel và View
+            var vm = new CreateRouteViewModel();
+            var view = new CreateRouteView(vm);
+
+            // 3. Hiện bảng lên (ShowDialog sẽ dừng code tại đây cho đến khi user đóng bảng)
+            bool? result = Application.ShowModalWindow(view);
+
+            // 4. Nếu user bấm nút "Vẽ tuyến" (Result = true) thì bắt đầu vẽ
+            if (result == true)
+            {
+                DrawPolylineRoute(vm.Width, vm.Elevation);
+            }
+        }
+
+        // Hàm hỗ trợ vẽ Polyline
+        private void DrawPolylineRoute(double width, double elevation)
+        {
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Database db = doc.Database;
+            Editor ed = doc.Editor;
+
+            // A. Yêu cầu người dùng chọn điểm
+            PromptPointOptions ppo = new PromptPointOptions("\nChọn điểm bắt đầu của lộ:");
+            PromptPointResult ppr = ed.GetPoint(ppo);
+            if (ppr.Status != PromptStatus.OK) return;
+
+            Point3d startPt = ppr.Value;
+
+            // B. Bắt đầu Transaction để vẽ
+            using (Transaction tr = db.TransactionManager.StartTransaction())
+            {
+                BlockTable bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                // Tạo Polyline
+                using (Polyline pline = new Polyline())
+                {
+                    // Set độ dày cho đường (giả lập bề rộng máng)
+                    pline.ConstantWidth = width;
+
+                    // Thêm điểm đầu (Lưu ý: Polyline 2D dùng Point2d, Cao độ dùng Elevation)
+                    pline.Elevation = elevation;
+                    pline.AddVertexAt(0, new Point2d(startPt.X, startPt.Y), 0, 0, 0);
+
+                    // Vòng lặp để vẽ tiếp các điểm sau
+                    int index = 1;
+                    while (true)
+                    {
+                        PromptPointOptions ppoNext = new PromptPointOptions("\nChọn điểm tiếp theo (hoặc Enter để kết thúc):");
+                        ppoNext.AllowNone = true;
+                        ppoNext.UseBasePoint = true;
+                        ppoNext.BasePoint = pline.GetPoint3dAt(index - 1); // Elastic line từ điểm trước
+
+                        PromptPointResult pprNext = ed.GetPoint(ppoNext);
+                        if (pprNext.Status != PromptStatus.OK) break; 
+
+                        pline.AddVertexAt(index, new Point2d(pprNext.Value.X, pprNext.Value.Y), 0, 0, 0);
+                        index++;
+                    }
+
+                    if (pline.NumberOfVertices > 1)
+                    {
+                        btr.AppendEntity(pline);
+                        tr.AddNewlyCreatedDBObject(pline, true);
+                        tr.Commit(); 
+                        ed.WriteMessage($"\nĐã vẽ tuyến rộng {width}mm tại cao độ {elevation}mm.");
+                    }
+                }
+            }
         }
     }
 }

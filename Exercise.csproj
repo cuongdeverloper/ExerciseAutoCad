@@ -59,6 +59,9 @@
     <Reference Include="acmgd">
       <HintPath>D:\AutoCAD 2024\acmgd.dll</HintPath>
     </Reference>
+    <Reference Include="AdWindows">
+      <HintPath>D:\AutoCAD 2024\AdWindows.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -78,20 +81,18 @@
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Actions\AttributeActions.cs" />
     <Compile Include="Commands\AutoCADCommands.cs" />
-    <Compile Include="Models\AttributeItem.cs" />
+    <Compile Include="Models\UserSession.cs" />
     <Compile Include="MVVM\RelayCommand.cs" />
-    <Compile Include="Models\DrawDataBridge.cs" />
-    <Compile Include="ViewModels\AttributeViewModel.cs" />
-    <Compile Include="Views\AttributeView.xaml.cs">
-      <DependentUpon>AttributeView.xaml</DependentUpon>
+    <Compile Include="Services\AuthService.cs" />
+    <Compile Include="ViewModels\CreateRouteViewModel.cs" />
+    <Compile Include="ViewModels\LoginViewModel.cs" />
+    <Compile Include="Views\CreateRouteView.xaml.cs">
+      <DependentUpon>CreateRouteView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Models\TextSetting.cs" />
-    <Page Include="Views\AttributeView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
+    <Compile Include="Views\LoginView.xaml.cs">
+      <DependentUpon>LoginView.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">
@@ -115,6 +116,17 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Page Include="Views\CreateRouteView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\LoginView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
