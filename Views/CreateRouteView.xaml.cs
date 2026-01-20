@@ -1,5 +1,5 @@
-﻿using System.Windows;
-using Exercise.ViewModels;
+﻿using Exercise.ViewModels;
+using System.Windows;
 
 namespace Exercise.Views
 {
@@ -8,13 +8,17 @@ namespace Exercise.Views
         public CreateRouteView(CreateRouteViewModel vm)
         {
             InitializeComponent();
+
             this.DataContext = vm;
 
-            vm.CloseAction = (result) =>
+            if (vm.CloseAction == null)
             {
-                this.DialogResult = result;
-                this.Close();
-            };
+                vm.CloseAction = (result) =>
+                {
+                    this.DialogResult = result; 
+                    this.Close();
+                };
+            }
         }
     }
 }

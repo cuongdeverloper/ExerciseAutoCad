@@ -109,8 +109,29 @@ namespace Exercise.Commands
             // 4. Nếu user bấm nút "Vẽ tuyến" (Result = true) thì bắt đầu vẽ
             if (result == true)
             {
-                DrawPolylineRoute(vm.Width, vm.Elevation);
+       
+                double widthToDraw = ParseSize(vm.InputSize);
+                double elevation = vm.Elevation;
+
+                DrawPolylineRoute(widthToDraw, elevation);
             }
+        }
+        private double ParseSize(string sizeString)
+        {
+            if (string.IsNullOrEmpty(sizeString)) return 100; 
+
+            if (double.TryParse(sizeString, out double result))
+            {
+                return result;
+            }
+
+            string[] parts = sizeString.ToLower().Split('x');
+            if (parts.Length > 0 && double.TryParse(parts[0], out double width))
+            {
+                return width;
+            }
+
+            return 100; 
         }
 
         // Hàm hỗ trợ vẽ Polyline
