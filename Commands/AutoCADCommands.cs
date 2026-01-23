@@ -5,6 +5,7 @@ using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.Windows;
 using Exercise.Models;
+using Exercise.Services;
 using Exercise.ViewModels;
 using Exercise.Views;
 using System;
@@ -49,11 +50,19 @@ namespace Exercise.Commands
         {
             bool isLoggedIn = UserSession.Instance.IsLoggedIn;
 
-            // Tìm Ribbon Control
             RibbonControl ribbon = ComponentManager.Ribbon;
             if (ribbon == null) return;
 
-            string[] buttonsToEnable = { "BTN_SETTINGS", "BTN_LOADSPEC", "BTN_CHECK" };
+            string[] buttonsToEnable = {
+        "BTN_SELECTPROJECT",  
+        "BTN_LOADSPEC",       
+        "BTN_CHECK",          
+        "BTN_CREATEROUTE",    
+        "BTN_CREATEATTR",   
+        "BTN_ASSIGNSPEC",     
+        "BTN_OVERRIDE"     
+    };
+
             string btnLoginId = "BTN_LOGIN";
             string btnLogoutId = "BTN_LOGOUT";
 
@@ -92,89 +101,80 @@ namespace Exercise.Commands
         [CommandMethod("MYROUTE")]
         public void CreateRoute()
         {
-            // 1. Kiểm tra đăng nhập (nếu cần)
             if (!UserSession.Instance.IsLoggedIn)
             {
                 Application.ShowAlertDialog("Bạn cần đăng nhập trước!");
                 return;
             }
 
-            // 2. Khởi tạo ViewModel và View
             var vm = new CreateRouteViewModel();
-            var view = new CreateRouteView(vm);
+            var view = new CreateRouteView(vm); // Đảm bảo View đã cập nhật XAML mới
 
-            // 3. Hiện bảng lên (ShowDialog sẽ dừng code tại đây cho đến khi user đóng bảng)
             bool? result = Application.ShowModalWindow(view);
 
-            // 4. Nếu user bấm nút "Vẽ tuyến" (Result = true) thì bắt đầu vẽ
             if (result == true)
             {
-       
-                double widthToDraw = ParseSize(vm.InputSize);
-                double elevation = vm.Elevation;
+                // --- SỬA ĐOẠN NÀY ---
+                // Lấy dòng đang được chọn trên lưới
+                var selectedItem = vm.SelectedRoute;
 
-                DrawPolylineRoute(widthToDraw, elevation);
+                if (selectedItem != null)
+                {
+
+                    DrawPolylineRoute(selectedItem);
+                }
             }
         }
-        private double ParseSize(string sizeString)
+
+        // Hàm tách chuỗi kích thước mới
+        private double ParseSizeString(string sizeStr)
         {
-            if (string.IsNullOrEmpty(sizeString)) return 100; 
+            if (string.IsNullOrEmpty(sizeStr)) return 100;
 
-            if (double.TryParse(sizeString, out double result))
+            // Xử lý chuỗi dạng "300x100" hoặc "300"
+            string[] parts = sizeStr.ToLower().Split('x');
+            if (parts.Length > 0 && double.TryParse(parts[0], out double w))
             {
-                return result;
+                return w;
             }
-
-            string[] parts = sizeString.ToLower().Split('x');
-            if (parts.Length > 0 && double.TryParse(parts[0], out double width))
-            {
-                return width;
-            }
-
-            return 100; 
+            return 100;
         }
-
-        // Hàm hỗ trợ vẽ Polyline
-        private void DrawPolylineRoute(double width, double elevation)
+        private void DrawPolylineRoute(RouteItemModel data)
         {
+            double width = ParseSizeString(data.Size);
+            double elevation = data.Elevation;
+
             Document doc = Application.DocumentManager.MdiActiveDocument;
             Database db = doc.Database;
             Editor ed = doc.Editor;
 
-            // A. Yêu cầu người dùng chọn điểm
             PromptPointOptions ppo = new PromptPointOptions("\nChọn điểm bắt đầu của lộ:");
             PromptPointResult ppr = ed.GetPoint(ppo);
             if (ppr.Status != PromptStatus.OK) return;
 
             Point3d startPt = ppr.Value;
 
-            // B. Bắt đầu Transaction để vẽ
             using (Transaction tr = db.TransactionManager.StartTransaction())
             {
                 BlockTable bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
                 BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
 
-                // Tạo Polyline
                 using (Polyline pline = new Polyline())
                 {
-                    // Set độ dày cho đường (giả lập bề rộng máng)
                     pline.ConstantWidth = width;
-
-                    // Thêm điểm đầu (Lưu ý: Polyline 2D dùng Point2d, Cao độ dùng Elevation)
                     pline.Elevation = elevation;
                     pline.AddVertexAt(0, new Point2d(startPt.X, startPt.Y), 0, 0, 0);
 
-                    // Vòng lặp để vẽ tiếp các điểm sau
                     int index = 1;
                     while (true)
                     {
-                        PromptPointOptions ppoNext = new PromptPointOptions("\nChọn điểm tiếp theo (hoặc Enter để kết thúc):");
-                        ppoNext.AllowNone = true;
+                        PromptPointOptions ppoNext = new PromptPointOptions("\nChọn điểm tiếp theo (Enter để kết thúc):");
                         ppoNext.UseBasePoint = true;
-                        ppoNext.BasePoint = pline.GetPoint3dAt(index - 1); // Elastic line từ điểm trước
+                        ppoNext.BasePoint = pline.GetPoint3dAt(index - 1);
+                        ppoNext.AllowNone = true;
 
                         PromptPointResult pprNext = ed.GetPoint(ppoNext);
-                        if (pprNext.Status != PromptStatus.OK) break; 
+                        if (pprNext.Status != PromptStatus.OK) break;
 
                         pline.AddVertexAt(index, new Point2d(pprNext.Value.X, pprNext.Value.Y), 0, 0, 0);
                         index++;
@@ -182,10 +182,13 @@ namespace Exercise.Commands
 
                     if (pline.NumberOfVertices > 1)
                     {
-                        btr.AppendEntity(pline);
+                        ObjectId plineId = btr.AppendEntity(pline);
                         tr.AddNewlyCreatedDBObject(pline, true);
-                        tr.Commit(); 
-                        ed.WriteMessage($"\nĐã vẽ tuyến rộng {width}mm tại cao độ {elevation}mm.");
+
+                        XDataHelper.AddRouteXData(plineId, data);
+
+                        tr.Commit();
+                        ed.WriteMessage($"\nĐã vẽ tuyến '{data.RouteName}' và lưu dữ liệu XData thành công.");
                     }
                 }
             }

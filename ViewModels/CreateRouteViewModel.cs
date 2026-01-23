@@ -1,13 +1,12 @@
 ﻿using Exercise.Models;
 using Exercise.MVVM;
-using Exercise.Services; // Cần dòng này để dùng ExcelImportService
-using Microsoft.Win32; // Cần dòng này để dùng OpenFileDialog
-using Newtonsoft.Json;
+using Exercise.Services;
+using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO;
-using System.Reflection;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
@@ -16,163 +15,118 @@ namespace Exercise.ViewModels
 {
     public class CreateRouteViewModel : INotifyPropertyChanged
     {
-        // ==========================================================
-        // PHẦN 1: CODE CŨ (ĐỌC JSON CABLE DATA)
-        // ==========================================================
-        public ObservableCollection<CableItem> CableList { get; set; }
+        // Danh sách Lộ
+        public ObservableCollection<RouteItemModel> Routes { get; set; }
 
-        private CableItem _selectedCable;
-        public CableItem SelectedCable
+        // --- QUAN TRỌNG: Biến lưu dòng đang chọn để vẽ ---
+        private RouteItemModel _selectedRoute;
+        public RouteItemModel SelectedRoute
         {
-            get => _selectedCable;
-            set
-            {
-                _selectedCable = value;
-                OnPropertyChanged();
-
-                // Logic tự động điền
-                if (_selectedCable != null)
-                {
-                    InputGroup = _selectedCable.ItemGroupName;
-                    InputSize = _selectedCable.SizeName;
-                    InputSymbol = _selectedCable.Symbol;
-                }
-            }
+            get => _selectedRoute;
+            set { _selectedRoute = value; OnPropertyChanged(); }
         }
 
-        private string _inputGroup;
-        public string InputGroup
+        // Danh sách Batch và ComboBox
+        public ObservableCollection<BatchInfoModel> Batches { get; set; }
+        public List<string> MaterialGroups { get; set; }
+        public List<string> Materials { get; set; }
+
+        // Form nhập liệu Batch mới
+        private BatchInfoModel _newBatchInput;
+        public BatchInfoModel NewBatchInput
         {
-            get => _inputGroup;
-            set { _inputGroup = value; OnPropertyChanged(); }
+            get => _newBatchInput;
+            set { _newBatchInput = value; OnPropertyChanged(); }
         }
 
-        private string _inputSize;
-        public string InputSize
-        {
-            get => _inputSize;
-            set { _inputSize = value; OnPropertyChanged(); }
-        }
-
-        private string _inputSymbol;
-        public string InputSymbol
-        {
-            get => _inputSymbol;
-            set { _inputSymbol = value; OnPropertyChanged(); }
-        }
-
-        private double _elevation = 2800;
-        public double Elevation
-        {
-            get => _elevation;
-            set { _elevation = value; OnPropertyChanged(); }
-        }
-
-        // ==========================================================
-        // PHẦN 2: CODE MỚI THÊM (IMPORT EXCEL)
-        // ==========================================================
-
-        // 1. Khai báo Service
-        private readonly ExcelImportService _excelService;
-
-        // 2. Danh sách chứa dữ liệu từ Excel để hiện lên bảng
-        public ObservableCollection<RouteImportModel> ImportedRoutes { get; set; }
-
-        // 3. Command cho nút Import
+        // Commands
         public ICommand ImportExcelCommand { get; set; }
-
-
-        // ==========================================================
-        // PHẦN 3: CONSTRUCTOR & COMMANDS
-        // ==========================================================
-        public Action<bool> CloseAction { get; set; }
+        public ICommand AddRouteCommand { get; set; }
+        public ICommand DeleteRouteCommand { get; set; }
+        public ICommand SaveBatchCommand { get; set; }
+        public ICommand DeleteBatchCommand { get; set; }
         public ICommand DrawCommand { get; set; }
+        public Action<bool> CloseAction { get; set; }
+
+        private readonly ExcelImportService _excelService;
 
         public CreateRouteViewModel()
         {
-            // Khởi tạo lệnh cũ
-            DrawCommand = new RelayCommand(ExecuteDraw);
-
-            // --- KHỞI TẠO PHẦN MỚI ---
             _excelService = new ExcelImportService();
-            ImportedRoutes = new ObservableCollection<RouteImportModel>();
+            Routes = new ObservableCollection<RouteItemModel>();
+            Batches = new ObservableCollection<BatchInfoModel>();
+            InitDummyData();
+            NewBatchInput = new BatchInfoModel();
 
-            // Tạo Command import (gọi hàm ImportData)
             ImportExcelCommand = new RelayCommand(ImportData);
+            AddRouteCommand = new RelayCommand(obj => Routes.Add(new RouteItemModel { RouteName = "New Route", Size = "200x100", Elevation = 2800 }));
 
-            // Load dữ liệu cũ
-            LoadCableData();
+            DeleteRouteCommand = new RelayCommand(obj =>
+            {
+                var itemsToDelete = Routes.Where(x => x.IsSelected).ToList();
+                foreach (var item in itemsToDelete) Routes.Remove(item);
+            });
+
+            SaveBatchCommand = new RelayCommand(ExecuteSaveBatch);
+            DeleteBatchCommand = new RelayCommand(obj => { if (obj is BatchInfoModel item) Batches.Remove(item); });
+
+            // Khi bấm nút Gán (Vẽ) -> Kiểm tra xem có chọn dòng nào chưa
+            DrawCommand = new RelayCommand(obj =>
+            {
+                if (SelectedRoute == null)
+                {
+                    MessageBox.Show("Vui lòng chọn một dòng lộ trong bảng để vẽ!", "Chưa chọn dữ liệu");
+                    return;
+                }
+                CloseAction?.Invoke(true);
+            });
         }
 
-        // --- HÀM XỬ LÝ IMPORT EXCEL MỚI ---
+        private void InitDummyData()
+        {
+            MaterialGroups = new List<string> { "Quạt gió", "Ống nước", "Thang máng cáp" };
+            Materials = new List<string> { "Quạt cấp", "Quạt hút", "Ống PVC", "Máng tôn" };
+            Batches.Add(new BatchInfoModel { BatchCode = "BAT001", InstallCondition = "1 giàn giáo", InstallSpace = "Lắp âm sàn" });
+        }
+
+        private void ExecuteSaveBatch(object obj)
+        {
+            if (string.IsNullOrEmpty(NewBatchInput.BatchCode)) return;
+            Batches.Add(new BatchInfoModel
+            {
+                BatchCode = NewBatchInput.BatchCode,
+                InstallCondition = NewBatchInput.InstallCondition,
+                InstallSpace = NewBatchInput.InstallSpace,
+                WorkPackage = NewBatchInput.WorkPackage,
+                Phase = NewBatchInput.Phase
+            });
+            NewBatchInput = new BatchInfoModel();
+            OnPropertyChanged(nameof(NewBatchInput));
+        }
+
         private void ImportData(object obj)
         {
-            OpenFileDialog openFileDialog = new OpenFileDialog
-            {
-                Filter = "Excel Files|*.xlsx;*.xls",
-                Title = "Chọn file dữ liệu Lộ"
-            };
-
-            if (openFileDialog.ShowDialog() == true)
+            OpenFileDialog dlg = new OpenFileDialog { Filter = "Excel Files|*.xlsx;*.xls" };
+            if (dlg.ShowDialog() == true)
             {
                 try
                 {
-                    // Gọi Service đọc file
-                    var data = _excelService.ImportRoutes(openFileDialog.FileName);
-
-                    // Xóa dữ liệu cũ trên lưới (nếu có) và thêm dữ liệu mới
-                    ImportedRoutes.Clear();
+                    var data = _excelService.ImportRoutes(dlg.FileName);
+                    Routes.Clear();
                     foreach (var item in data)
                     {
-                        ImportedRoutes.Add(item);
+                        Routes.Add(new RouteItemModel
+                        {
+                            RouteName = item.RouteName,
+                            Size = $"{item.Width}x{item.Height}",
+                            Elevation = item.BottomElevation
+                        });
                     }
-
-                    MessageBox.Show($"Đã đọc thành công {data.Count} dòng dữ liệu!", "Thông báo");
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Lỗi khi đọc file Excel: " + ex.Message, "Lỗi");
-                }
+                catch (Exception ex) { MessageBox.Show("Lỗi: " + ex.Message); }
             }
         }
 
-        // --- HÀM XỬ LÝ CŨ ---
-        private void LoadCableData()
-        {
-            string assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            string path = Path.Combine(assemblyFolder, "CableData.json");
-
-            if (File.Exists(path))
-            {
-                try
-                {
-                    string jsonContent = File.ReadAllText(path);
-                    var rootObject = JsonConvert.DeserializeObject<CableDataWrapper>(jsonContent);
-
-                    if (rootObject != null)
-                        CableList = rootObject.items;
-                    else
-                        CableList = new ObservableCollection<CableItem>();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Lỗi đọc JSON: " + ex.Message);
-                    CableList = new ObservableCollection<CableItem>();
-                }
-            }
-            else
-            {
-                // MessageBox.Show("Không tìm thấy file JSON!"); // Có thể comment lại để đỡ phiền nếu chưa có file
-                CableList = new ObservableCollection<CableItem>();
-            }
-        }
-
-        private void ExecuteDraw(object obj)
-        {
-            CloseAction?.Invoke(true);
-        }
-
-        // --- INotifyPropertyChanged ---
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {

@@ -1,18 +1,146 @@
 ﻿<Window x:Class="Exercise.Views.CreateRouteView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="CreateRouteView" Height="450" Width="800">
+        Title="Tạo lộ" Height="500" Width="800"
+        WindowStartupLocation="CenterScreen">
 
-    <Grid>
+    <Grid Margin="10">
+        <TabControl>
+            <TabItem Header="Thông tin lộ">
+                <Grid Margin="0,10,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-        <StackPanel Margin="10">
-            <GroupBox Header="Nhập dữ liệu từ Excel">
-                <StackPanel>
-                    <Button Content="Import Excel File" Command="{Binding ImportExcelCommand}" Height="30"/>
-                    <DataGrid ItemsSource="{Binding ImportedRoutes}" Height="150"/>
-                </StackPanel>
-            </GroupBox>
-        </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,10">
+                        <Button Content="Import" Command="{Binding ImportExcelCommand}" 
+                                Background="Orange" Foreground="White" FontWeight="Bold" Padding="10,5" Margin="0,0,10,0"/>
+                        <Button Content="Tạo mới" Command="{Binding AddRouteCommand}"
+                                Background="LightGreen" FontWeight="Bold" Padding="10,5"/>
+                    </StackPanel>
 
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button Content="Xóa đã chọn" Command="{Binding DeleteRouteCommand}" Margin="0,0,10,10"/>
+                    </StackPanel>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding Routes}" 
+          SelectedItem="{Binding SelectedRoute}"  
+          AutoGenerateColumns="False" 
+          CanUserAddRows="False" SelectionMode="Single" RowHeight="35">
+                        <DataGrid.Columns>
+
+                            <DataGridCheckBoxColumn Binding="{Binding IsSelected}" Width="40"/>
+
+                            <DataGridTextColumn Header="Tên lộ" Binding="{Binding RouteName}" Width="100"/>
+
+                            <DataGridTemplateColumn Header="Batch" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding DataContext.Batches, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                  DisplayMemberPath="BatchCode"
+                                                  SelectedValuePath="BatchCode"
+                                                  SelectedValue="{Binding SelectedBatch, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="Nhóm vật tư" Width="120">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding DataContext.MaterialGroups, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                  SelectedValue="{Binding SelectedGroup, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTemplateColumn Header="Vật tư" Width="120">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding DataContext.Materials, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                  SelectedValue="{Binding SelectedMaterial, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="Kích thước" Binding="{Binding Size}" Width="80"/>
+                            <DataGridTextColumn Header="Ký hiệu" Binding="{Binding Symbol}" Width="60"/>
+                            <DataGridTextColumn Header="Số lượng" Binding="{Binding Quantity}" Width="60"/>
+
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                        <Button Content="Gán" Command="{Binding DrawCommand}" Width="80" Margin="0,0,10,0"/>
+                        <Button Content="Đóng" IsCancel="True" Width="80" Background="#DD5555" Foreground="White"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Thông tin bổ sung">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border BorderBrush="Gray" BorderThickness="1" Padding="10" CornerRadius="5">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Text="Mã Batch:" Grid.Row="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding NewBatchInput.BatchCode}" Margin="0,0,0,5"/>
+
+                            <TextBlock Text="Điều kiện lắp đặt:" Grid.Row="1" VerticalAlignment="Center" Margin="0,0,10,5"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding NewBatchInput.InstallCondition}" Margin="0,0,0,5"/>
+
+                            <TextBlock Text="Không gian:" Grid.Row="2" VerticalAlignment="Center" Margin="0,0,10,5"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding NewBatchInput.InstallSpace}" Margin="0,0,0,5"/>
+
+                            <TextBlock Text="Gói công việc:" Grid.Row="3" VerticalAlignment="Center" Margin="0,0,10,5"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding NewBatchInput.WorkPackage}" Margin="0,0,0,5"/>
+
+                            <TextBlock Text="Giai đoạn:" Grid.Row="4" VerticalAlignment="Center" Margin="0,0,10,5"/>
+                            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding NewBatchInput.Phase}" Margin="0,0,0,5"/>
+                        </Grid>
+                    </Border>
+
+                    <Button Grid.Row="1" Content="Lưu Batch" Command="{Binding SaveBatchCommand}" 
+                            HorizontalAlignment="Right" Width="100" Margin="0,10,0,10" Background="LightGreen"/>
+
+                    <GroupBox Grid.Row="2" Header="Danh sách Batch">
+                        <DataGrid ItemsSource="{Binding Batches}" AutoGenerateColumns="False" CanUserAddRows="False">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Mã Batch" Binding="{Binding BatchCode}" Width="80" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="Điều kiện" Binding="{Binding InstallCondition}" Width="*"/>
+                                <DataGridTextColumn Header="Không gian" Binding="{Binding InstallSpace}" Width="*"/>
+                                <DataGridTextColumn Header="Gói thầu" Binding="{Binding WorkPackage}" Width="*"/>
+                                <DataGridTextColumn Header="Giai đoạn" Binding="{Binding Phase}" Width="60"/>
+                                <DataGridTemplateColumn Width="50">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="🗑️" Command="{Binding DataContext.DeleteBatchCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                                    CommandParameter="{Binding}" Foreground="Red"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </GroupBox>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </Grid>
 </Window>
