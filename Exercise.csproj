@@ -123,6 +123,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Commands\AutoCADCommands.cs" />
+    <Compile Include="Models\AttributeItemModel.cs" />
     <Compile Include="Models\CableItem.cs" />
     <Compile Include="Models\RouteModels.cs" />
     <Compile Include="Models\UserSession.cs" />
@@ -130,8 +131,12 @@
     <Compile Include="Services\AuthService.cs" />
     <Compile Include="Services\ExcelImportService.cs" />
     <Compile Include="Services\XDataHelper.cs" />
+    <Compile Include="ViewModels\CreateAttributeViewModel.cs" />
     <Compile Include="ViewModels\CreateRouteViewModel.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />
+    <Compile Include="Views\CreateAttributeView.xaml.cs">
+      <DependentUpon>CreateAttributeView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\CreateRouteView.xaml.cs">
       <DependentUpon>CreateRouteView.xaml</DependentUpon>
     </Compile>
@@ -166,6 +171,10 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
+    <Page Include="Views\CreateAttributeView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\CreateRouteView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

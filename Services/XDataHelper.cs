@@ -1,6 +1,8 @@
-﻿using Autodesk.AutoCAD.DatabaseServices;
-using Autodesk.AutoCAD.ApplicationServices;
+﻿using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk.AutoCAD.DatabaseServices;
 using Exercise.Models;
+using System.Collections.Generic;
+using System.Linq; 
 
 namespace Exercise.Services
 {
@@ -27,34 +29,56 @@ namespace Exercise.Services
 
                 Entity ent = (Entity)tr.GetObject(entityId, OpenMode.ForWrite);
 
-                // DxfCode.ExtendedDataRegAppName (1001): Bắt buộc dòng đầu tiên
-                // DxfCode.ExtendedDataAsciiString (1000): Lưu chuỗi
-                // DxfCode.ExtendedDataReal (1040): Lưu số thực
-                // DxfCode.ExtendedDataInteger32 (1070): Lưu số nguyên
-
                 ResultBuffer rb = new ResultBuffer(
                     new TypedValue((int)DxfCode.ExtendedDataRegAppName, AppName),
-
-                    // Lưu Tên Tuyến
                     new TypedValue((int)DxfCode.ExtendedDataAsciiString, "RouteName:" + data.RouteName),
-
-                    // Lưu Batch (Quan trọng để mentor check)
                     new TypedValue((int)DxfCode.ExtendedDataAsciiString, "Batch:" + (data.SelectedBatch ?? "")),
-
-                    // Lưu Kích thước
                     new TypedValue((int)DxfCode.ExtendedDataAsciiString, "Size:" + data.Size),
-
-                    // Lưu Vật tư
                     new TypedValue((int)DxfCode.ExtendedDataAsciiString, "Material:" + (data.SelectedMaterial ?? "")),
-
-                    // Lưu Cao độ (Lưu dạng số thực)
                     new TypedValue((int)DxfCode.ExtendedDataReal, data.Elevation)
                 );
 
                 ent.XData = rb;
+                tr.Commit();
+            }
+        }
+
+        // [QUAN TRỌNG] Hàm này phải nằm TRONG class XDataHelper (trước dấu đóng ngoặc class)
+        public static void AddListAttributeXData(List<ObjectId> entityIds, string routeName, List<AttributeItemModel> attributes)
+        {
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Database db = doc.Database;
+
+            using (Transaction tr = db.TransactionManager.StartTransaction())
+            {
+                RegAppTable regTable = (RegAppTable)tr.GetObject(db.RegAppTableId, OpenMode.ForRead);
+                if (!regTable.Has(AppName))
+                {
+                    regTable.UpgradeOpen();
+                    RegAppTableRecord regRec = new RegAppTableRecord();
+                    regRec.Name = AppName;
+                    regTable.Add(regRec);
+                    tr.AddNewlyCreatedDBObject(regRec, true);
+                }
+
+                // Chuyển List thành chuỗi, ví dụ: "K1:10;K2:5"
+                string attrString = string.Join(";", attributes.Select(x => $"{x.Symbol}:{x.Quantity}"));
+
+                foreach (ObjectId id in entityIds)
+                {
+                    Entity ent = (Entity)tr.GetObject(id, OpenMode.ForWrite);
+
+                    ResultBuffer rb = new ResultBuffer(
+                        new TypedValue((int)DxfCode.ExtendedDataRegAppName, AppName),
+                        new TypedValue((int)DxfCode.ExtendedDataAsciiString, "RouteName:" + routeName),
+                        new TypedValue((int)DxfCode.ExtendedDataAsciiString, "Attributes:" + attrString)
+                    );
+
+                    ent.XData = rb;
+                }
 
                 tr.Commit();
             }
         }
-    }
+    } 
 }

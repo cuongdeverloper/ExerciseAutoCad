@@ -193,5 +193,19 @@ namespace Exercise.Commands
                 }
             }
         }
+        [CommandMethod("CREATE_ATTRIBUTE")]
+        public void ShowAttributeForm()
+        {
+            if (!UserSession.Instance.IsLoggedIn)
+            {
+                Application.ShowAlertDialog("Bạn cần đăng nhập trước!");
+                return;
+            }
+
+            var vm = new CreateAttributeViewModel();
+            var view = new CreateAttributeView(vm);
+
+            Application.ShowModalWindow(view);
+        }
     }
 }
