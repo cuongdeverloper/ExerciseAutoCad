@@ -13,12 +13,14 @@ using System.Windows.Input;
 
 namespace Exercise.ViewModels
 {
+    // Kế thừa BindableBase cho gọn (nếu project đã có), hoặc giữ INotifyPropertyChanged như bạn muốn
     public class CreateRouteViewModel : INotifyPropertyChanged
     {
-        // Danh sách Lộ
-        public ObservableCollection<RouteItemModel> Routes { get; set; }
+        // 1. LIÊN KẾT VỚI KHO DỮ LIỆU CHUNG (Singleton)
+        // Dùng dấu => để luôn trỏ về kho chung. Không được gán bằng dấu =
+        public ObservableCollection<RouteItemModel> Routes => ProjectDataManager.Instance.GlobalRoutes;
 
-        // --- QUAN TRỌNG: Biến lưu dòng đang chọn để vẽ ---
+        // --- Biến lưu dòng đang chọn ---
         private RouteItemModel _selectedRoute;
         public RouteItemModel SelectedRoute
         {
@@ -53,13 +55,15 @@ namespace Exercise.ViewModels
         public CreateRouteViewModel()
         {
             _excelService = new ExcelImportService();
-            Routes = new ObservableCollection<RouteItemModel>();
+
             Batches = new ObservableCollection<BatchInfoModel>();
             InitDummyData();
             NewBatchInput = new BatchInfoModel();
 
             ImportExcelCommand = new RelayCommand(ImportData);
-            AddRouteCommand = new RelayCommand(obj => Routes.Add(new RouteItemModel { RouteName = "New Route", Size = "200x100", Elevation = 2800 }));
+
+            AddRouteCommand = new RelayCommand(obj =>
+                Routes.Add(new RouteItemModel { RouteName = "New Route", Size = "200x100", Elevation = 2800 }));
 
             DeleteRouteCommand = new RelayCommand(obj =>
             {
@@ -70,7 +74,6 @@ namespace Exercise.ViewModels
             SaveBatchCommand = new RelayCommand(ExecuteSaveBatch);
             DeleteBatchCommand = new RelayCommand(obj => { if (obj is BatchInfoModel item) Batches.Remove(item); });
 
-            // Khi bấm nút Gán (Vẽ) -> Kiểm tra xem có chọn dòng nào chưa
             DrawCommand = new RelayCommand(obj =>
             {
                 if (SelectedRoute == null)
@@ -112,16 +115,23 @@ namespace Exercise.ViewModels
                 try
                 {
                     var data = _excelService.ImportRoutes(dlg.FileName);
-                    Routes.Clear();
+
+
+                    var newItems = new List<RouteItemModel>();
+
                     foreach (var item in data)
                     {
-                        Routes.Add(new RouteItemModel
+                        newItems.Add(new RouteItemModel
                         {
                             RouteName = item.RouteName,
                             Size = $"{item.Width}x{item.Height}",
                             Elevation = item.BottomElevation
                         });
                     }
+
+                    ProjectDataManager.Instance.UpdateRoutes(newItems);
+
+                    OnPropertyChanged(nameof(Routes));
                 }
                 catch (Exception ex) { MessageBox.Show("Lỗi: " + ex.Message); }
             }

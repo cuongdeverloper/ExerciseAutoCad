@@ -130,6 +130,7 @@
     <Compile Include="MVVM\RelayCommand.cs" />
     <Compile Include="Services\AuthService.cs" />
     <Compile Include="Services\ExcelImportService.cs" />
+    <Compile Include="Services\ProjectDataManager.cs" />
     <Compile Include="Services\XDataHelper.cs" />
     <Compile Include="ViewModels\CreateAttributeViewModel.cs" />
     <Compile Include="ViewModels\CreateRouteViewModel.cs" />

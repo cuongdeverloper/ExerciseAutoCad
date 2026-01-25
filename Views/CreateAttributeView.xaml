@@ -21,7 +21,11 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Tên lộ" VerticalAlignment="Center" Margin="0,0,20,0"/>
-                    <ComboBox Grid.Column="1" ItemsSource="{Binding RouteNames}" SelectedItem="{Binding SelectedRouteName}" Height="30"/>
+                    <ComboBox Grid.Column="1" 
+          ItemsSource="{Binding AvailableRoutes}" 
+          SelectedItem="{Binding SelectedRoute}" 
+          DisplayMemberPath="RouteName" 
+          Height="30"/>
                 </Grid>
             </StackPanel>
         </Border>

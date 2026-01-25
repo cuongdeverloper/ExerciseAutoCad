@@ -193,7 +193,7 @@ namespace Exercise.Commands
                 }
             }
         }
-        [CommandMethod("CREATE_ATTRIBUTE")]
+        [CommandMethod("YATTR")]
         public void ShowAttributeForm()
         {
             if (!UserSession.Instance.IsLoggedIn)

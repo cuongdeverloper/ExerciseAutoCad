@@ -16,12 +16,15 @@ namespace Exercise.ViewModels
 {
     public class CreateAttributeViewModel : BindableBase
     {
-        public ObservableCollection<string> RouteNames { get; set; }
-        private string _selectedRouteName;
-        public string SelectedRouteName
+
+        public ObservableCollection<RouteItemModel> AvailableRoutes => ProjectDataManager.Instance.GlobalRoutes;
+
+
+        private RouteItemModel _selectedRoute;
+        public RouteItemModel SelectedRoute
         {
-            get => _selectedRouteName;
-            set { _selectedRouteName = value; OnPropertyChanged(); }
+            get => _selectedRoute;
+            set { _selectedRoute = value; OnPropertyChanged(); }
         }
 
         public ObservableCollection<AttributeItemModel> Attributes { get; set; }
@@ -40,22 +43,20 @@ namespace Exercise.ViewModels
             set { _isByLayer = value; OnPropertyChanged(); }
         }
 
-        private List<ObjectId> _selectedObjectIds;
+        private List<ObjectId> _targetIds;
 
         public Action HideWindowAction { get; set; }
         public Action ShowWindowAction { get; set; }
         public Action<bool> CloseAction { get; set; }
 
         public ICommand AddAttributeCommand { get; set; }
-        public ICommand RemoveAttributeCommand { get; set; }
         public ICommand SelectEntityCommand { get; set; }
         public ICommand AssignCommand { get; set; }
 
         public CreateAttributeViewModel()
         {
-            RouteNames = new ObservableCollection<string> { "Lộ S1", "Lộ S2", "Lộ S3", "Lộ Nước Cấp" };
             Attributes = new ObservableCollection<AttributeItemModel>();
-            _selectedObjectIds = new List<ObjectId>();
+            _targetIds = new List<ObjectId>();
 
             AddAttributeCommand = new RelayCommand(obj =>
             {
@@ -63,7 +64,6 @@ namespace Exercise.ViewModels
             });
 
             SelectEntityCommand = new RelayCommand(ExecuteSelectEntity);
-
             AssignCommand = new RelayCommand(ExecuteAssign);
         }
 
@@ -76,25 +76,27 @@ namespace Exercise.ViewModels
 
             try
             {
-                PromptSelectionResult psr = ed.GetSelection();
-
-                if (psr.Status == PromptStatus.OK)
+                if (IsByEntity)
                 {
-                    var selectedIds = psr.Value.GetObjectIds().ToList();
-                    _selectedObjectIds.Clear();
-
-                    if (IsByEntity)
+                    PromptSelectionResult psr = ed.GetSelection();
+                    if (psr.Status == PromptStatus.OK)
                     {
-                        _selectedObjectIds.AddRange(selectedIds);
-                        ed.WriteMessage($"\nĐã chọn {_selectedObjectIds.Count} đối tượng.");
+                        _targetIds = psr.Value.GetObjectIds().ToList();
+                        ed.WriteMessage($"\nĐã chọn {_targetIds.Count} đối tượng.");
                     }
-                    else if (IsByLayer)
+                }
+                else if (IsByLayer)
+                {
+                    var peo = new PromptEntityOptions("\nChọn đối tượng mẫu để lấy Layer:");
+                    var per = ed.GetEntity(peo);
+
+                    if (per.Status == PromptStatus.OK)
                     {
                         using (Transaction tr = doc.Database.TransactionManager.StartTransaction())
                         {
-                            Entity ent = (Entity)tr.GetObject(selectedIds[0], OpenMode.ForRead);
+                            Entity ent = (Entity)tr.GetObject(per.ObjectId, OpenMode.ForRead);
                             string layerName = ent.Layer;
-                            ed.WriteMessage($"\nĐã chọn mẫu thuộc layer: {layerName}. Đang lọc tất cả...");
+                            ed.WriteMessage($"\nĐã chọn mẫu thuộc layer: {layerName}. Đang lọc...");
 
                             TypedValue[] filterList = new TypedValue[] {
                                 new TypedValue((int)DxfCode.LayerName, layerName)
@@ -104,8 +106,8 @@ namespace Exercise.ViewModels
 
                             if (allOnLayer.Status == PromptStatus.OK)
                             {
-                                _selectedObjectIds.AddRange(allOnLayer.Value.GetObjectIds());
-                                ed.WriteMessage($"\n-> Đã tìm thấy tổng cộng {_selectedObjectIds.Count} đối tượng trên layer {layerName}.");
+                                _targetIds = allOnLayer.Value.GetObjectIds().ToList();
+                                ed.WriteMessage($"\n-> Tìm thấy {_targetIds.Count} đối tượng trên layer {layerName}.");
                             }
                         }
                     }
@@ -113,7 +115,7 @@ namespace Exercise.ViewModels
             }
             catch (System.Exception ex)
             {
-                Application.ShowAlertDialog("Lỗi chọn đối tượng: " + ex.Message);
+                MessageBox.Show("Lỗi chọn đối tượng: " + ex.Message);
             }
             finally
             {
@@ -123,19 +125,19 @@ namespace Exercise.ViewModels
 
         private void ExecuteAssign(object obj)
         {
-            if (_selectedObjectIds == null || _selectedObjectIds.Count == 0)
+            if (_targetIds == null || _targetIds.Count == 0)
             {
                 MessageBox.Show("Vui lòng chọn đối tượng trước!", "Cảnh báo");
                 return;
             }
 
-            if (string.IsNullOrEmpty(SelectedRouteName))
+            if (SelectedRoute == null)
             {
                 MessageBox.Show("Vui lòng chọn Tên lộ!", "Cảnh báo");
                 return;
             }
 
-            XDataHelper.AddListAttributeXData(_selectedObjectIds, SelectedRouteName, Attributes.ToList());
+            XDataHelper.AddListAttributeXData(_targetIds, SelectedRoute.RouteName, Attributes.ToList());
 
             MessageBox.Show("Đã gán thuộc tính thành công!", "Thông báo");
             CloseAction?.Invoke(true);

@@ -10,6 +10,7 @@ namespace Exercise.Services
     {
         private const string AppName = "MY_ROUTE_APP";
 
+        // Hàm cũ: Gán cho Lộ khi vẽ mới
         public static void AddRouteXData(ObjectId entityId, RouteItemModel data)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
@@ -32,9 +33,7 @@ namespace Exercise.Services
                 ResultBuffer rb = new ResultBuffer(
                     new TypedValue((int)DxfCode.ExtendedDataRegAppName, AppName),
                     new TypedValue((int)DxfCode.ExtendedDataAsciiString, "RouteName:" + data.RouteName),
-                    new TypedValue((int)DxfCode.ExtendedDataAsciiString, "Batch:" + (data.SelectedBatch ?? "")),
                     new TypedValue((int)DxfCode.ExtendedDataAsciiString, "Size:" + data.Size),
-                    new TypedValue((int)DxfCode.ExtendedDataAsciiString, "Material:" + (data.SelectedMaterial ?? "")),
                     new TypedValue((int)DxfCode.ExtendedDataReal, data.Elevation)
                 );
 
@@ -43,7 +42,6 @@ namespace Exercise.Services
             }
         }
 
-        // [QUAN TRỌNG] Hàm này phải nằm TRONG class XDataHelper (trước dấu đóng ngoặc class)
         public static void AddListAttributeXData(List<ObjectId> entityIds, string routeName, List<AttributeItemModel> attributes)
         {
             Document doc = Application.DocumentManager.MdiActiveDocument;
@@ -61,24 +59,20 @@ namespace Exercise.Services
                     tr.AddNewlyCreatedDBObject(regRec, true);
                 }
 
-                // Chuyển List thành chuỗi, ví dụ: "K1:10;K2:5"
                 string attrString = string.Join(";", attributes.Select(x => $"{x.Symbol}:{x.Quantity}"));
 
                 foreach (ObjectId id in entityIds)
                 {
                     Entity ent = (Entity)tr.GetObject(id, OpenMode.ForWrite);
-
                     ResultBuffer rb = new ResultBuffer(
                         new TypedValue((int)DxfCode.ExtendedDataRegAppName, AppName),
                         new TypedValue((int)DxfCode.ExtendedDataAsciiString, "RouteName:" + routeName),
                         new TypedValue((int)DxfCode.ExtendedDataAsciiString, "Attributes:" + attrString)
                     );
-
                     ent.XData = rb;
                 }
-
                 tr.Commit();
             }
         }
-    } 
+    }
 }
