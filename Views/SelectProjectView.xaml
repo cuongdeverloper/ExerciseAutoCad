@@ -1,0 +1,32 @@
+﻿<Window x:Class="Exercise.Views.SelectProjectView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Chọn Dự Án" Height="250" Width="400"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Cấu hình dự án" FontSize="16" FontWeight="Bold" Margin="0,0,0,15"/>
+
+        <Button Grid.Row="1" Content="📂 Đọc file Excel dữ liệu" Command="{Binding LoadExcelCommand}" 
+                Padding="10,5" HorizontalAlignment="Left" Margin="0,0,0,15"/>
+
+        <StackPanel Grid.Row="2">
+            <TextBlock Text="Chọn Dự án - Tháp:" Margin="0,0,0,5"/>
+            <ComboBox ItemsSource="{Binding Projects}" 
+                      SelectedItem="{Binding SelectedProject}"
+                      DisplayMemberPath="DisplayName"
+                      Height="30" VerticalContentAlignment="Center"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+            <Button Content="Xác nhận" Command="{Binding ConfirmCommand}" 
+                    Width="100" Height="30" Background="#1976D2" Foreground="White" FontWeight="Bold"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -56,5 +56,67 @@ namespace Exercise.Services
 
             return listRoutes;
         }
+        public List<ProjectModel> ImportProjects(string filePath)
+        {
+            var listProjects = new List<ProjectModel>();
+            try
+            {
+                if (!File.Exists(filePath)) return listProjects;
+
+                using (var workbook = new XLWorkbook(filePath))
+                {
+                    IXLWorksheet worksheet = null;
+
+                    foreach (var sheet in workbook.Worksheets)
+                    {
+                        if (sheet.Name.Trim().Equals("Projects", StringComparison.OrdinalIgnoreCase))
+                        {
+                            worksheet = sheet;
+                            break;
+                        }
+                    }
+
+                    if (worksheet == null)
+                    {
+                        if (workbook.Worksheets.Count >= 2)
+                        {
+                            worksheet = workbook.Worksheet(2);
+                        }
+                        else if (workbook.Worksheets.Count == 1)
+                        {
+                            worksheet = workbook.Worksheet(1);
+                        }
+                        else
+                        {
+                            return listProjects;
+                        }
+                    }
+
+                    var lastRow = worksheet.LastRowUsed().RowNumber();
+
+                    for (int i = 2; i <= lastRow; i++)
+                    {
+                        var row = worksheet.Row(i);
+
+                        if (row.Cell(1).IsEmpty()) continue;
+
+                        var proj = new ProjectModel();
+                        proj.ProjectName = row.Cell(1).GetValue<string>();
+                        proj.TowerName = row.Cell(2).GetValue<string>();
+
+                        if (!string.IsNullOrWhiteSpace(proj.ProjectName))
+                        {
+                            listProjects.Add(proj);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+
+                return new List<ProjectModel>();
+            }
+            return listProjects;
+        }
     }
 }

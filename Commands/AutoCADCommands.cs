@@ -9,6 +9,7 @@ using Exercise.Services;
 using Exercise.ViewModels;
 using Exercise.Views;
 using System;
+using System.Collections.Generic;
 
 [assembly: CommandClass(typeof(Exercise.Commands.AutoCADCommands))]
 
@@ -26,7 +27,7 @@ namespace Exercise.Commands
             UserSession.Instance.AuthenticationChanged -= OnAuthenticationChanged;
         }
 
-        [CommandMethod("MYLOGIN")]
+        [CommandMethod("MY_LOGIN")]
         public void ShowLoginForm()
         {
             if (UserSession.Instance.IsLoggedIn)
@@ -49,19 +50,18 @@ namespace Exercise.Commands
         private void OnAuthenticationChanged(object sender, EventArgs e)
         {
             bool isLoggedIn = UserSession.Instance.IsLoggedIn;
-
             RibbonControl ribbon = ComponentManager.Ribbon;
             if (ribbon == null) return;
 
             string[] buttonsToEnable = {
-        "BTN_SELECTPROJECT",  
-        "BTN_LOADSPEC",       
-        "BTN_CHECK",          
-        "BTN_CREATEROUTE",    
-        "BTN_CREATEATTR",   
-        "BTN_ASSIGNSPEC",     
-        "BTN_OVERRIDE"     
-    };
+                "BTN_SELECTPROJECT",
+                "BTN_LOADSPEC",
+                "BTN_CHECK",
+                "BTN_CREATEROUTE",
+                "BTN_CREATEATTR",
+                "BTN_ASSIGNSPEC",
+                "BTN_OVERRIDE"
+            };
 
             string btnLoginId = "BTN_LOGIN";
             string btnLogoutId = "BTN_LOGOUT";
@@ -76,9 +76,7 @@ namespace Exercise.Commands
                         {
                             if (IsMatchingId(item, targetId)) item.IsEnabled = isLoggedIn;
                         }
-
                         if (IsMatchingId(item, btnLoginId)) item.IsEnabled = !isLoggedIn;
-
                         if (IsMatchingId(item, btnLogoutId)) item.IsEnabled = isLoggedIn;
                     }
                 }
@@ -88,7 +86,6 @@ namespace Exercise.Commands
         private bool IsMatchingId(RibbonItem item, string targetId)
         {
             if (item.Id == targetId) return true;
-
             if (item is RibbonRowPanel row)
             {
                 foreach (var subItem in row.Items)
@@ -98,6 +95,7 @@ namespace Exercise.Commands
             }
             return false;
         }
+
         [CommandMethod("MYROUTE")]
         public void CreateRoute()
         {
@@ -107,31 +105,98 @@ namespace Exercise.Commands
                 return;
             }
 
+            if (ProjectDataManager.Instance.CurrentProject == null)
+            {
+                Application.ShowAlertDialog("Vui lòng chọn DỰ ÁN và THÁP trước khi tạo lộ!\n(Dùng lệnh MYPROJECT để chọn)");
+
+                ShowProjectSelection();
+                return;
+            }
+
             var vm = new CreateRouteViewModel();
-            var view = new CreateRouteView(vm); // Đảm bảo View đã cập nhật XAML mới
+            var view = new CreateRouteView(vm);
 
             bool? result = Application.ShowModalWindow(view);
 
             if (result == true)
             {
-                // --- SỬA ĐOẠN NÀY ---
-                // Lấy dòng đang được chọn trên lưới
                 var selectedItem = vm.SelectedRoute;
-
                 if (selectedItem != null)
                 {
-
                     DrawPolylineRoute(selectedItem);
                 }
             }
         }
 
-        // Hàm tách chuỗi kích thước mới
+        [CommandMethod("YATTR", CommandFlags.UsePickSet)] 
+        public void ShowAttributeForm()
+        {
+            if (!UserSession.Instance.IsLoggedIn)
+            {
+                Application.ShowAlertDialog("Bạn cần đăng nhập trước!");
+                return;
+            }
+
+            if (ProjectDataManager.Instance.CurrentProject == null)
+            {
+                Application.ShowAlertDialog("Vui lòng chọn DỰ ÁN và THÁP trước!");
+                ShowProjectSelection();
+                return;
+            }
+
+            var doc = Application.DocumentManager.MdiActiveDocument;
+            var ed = doc.Editor;
+
+            List<ObjectId> selectedIds = new List<ObjectId>();
+
+            var psrImplied = ed.SelectImplied();
+            if (psrImplied.Status == PromptStatus.OK)
+            {
+                selectedIds.AddRange(psrImplied.Value.GetObjectIds());
+            }
+            else
+            {
+                var peo = new PromptSelectionOptions();
+                peo.MessageForAdding = "\nQuét chọn các đối tượng cần gán thuộc tính: ";
+
+                var psr = ed.GetSelection(peo);
+                if (psr.Status == PromptStatus.OK)
+                {
+                    selectedIds.AddRange(psr.Value.GetObjectIds());
+                }
+                else
+                {
+                    return;
+                }
+            }
+
+            if (selectedIds.Count == 0) return;
+
+            var vm = new CreateAttributeViewModel(selectedIds);
+            var view = new CreateAttributeView(vm);
+
+            Application.ShowModalWindow(view);
+        }
+
+        [CommandMethod("MYPROJECT")]
+        public void ShowProjectSelection()
+        {
+            if (!UserSession.Instance.IsLoggedIn)
+            {
+                Application.ShowAlertDialog("Bạn cần đăng nhập trước!");
+                return;
+            }
+
+
+            var vm = new SelectProjectViewModel();
+            var view = new SelectProjectView(vm);
+
+            Application.ShowModalWindow(view);
+        }
+
         private double ParseSizeString(string sizeStr)
         {
             if (string.IsNullOrEmpty(sizeStr)) return 100;
-
-            // Xử lý chuỗi dạng "300x100" hoặc "300"
             string[] parts = sizeStr.ToLower().Split('x');
             if (parts.Length > 0 && double.TryParse(parts[0], out double w))
             {
@@ -139,6 +204,7 @@ namespace Exercise.Commands
             }
             return 100;
         }
+
         private void DrawPolylineRoute(RouteItemModel data)
         {
             double width = ParseSizeString(data.Size);
@@ -184,28 +250,48 @@ namespace Exercise.Commands
                     {
                         ObjectId plineId = btr.AppendEntity(pline);
                         tr.AddNewlyCreatedDBObject(pline, true);
-
                         XDataHelper.AddRouteXData(plineId, data);
-
                         tr.Commit();
                         ed.WriteMessage($"\nĐã vẽ tuyến '{data.RouteName}' và lưu dữ liệu XData thành công.");
                     }
                 }
             }
         }
-        [CommandMethod("YATTR")]
-        public void ShowAttributeForm()
+        [CommandMethod("MYCHECK")]
+        public void CheckXData()
         {
-            if (!UserSession.Instance.IsLoggedIn)
+            var doc = Application.DocumentManager.MdiActiveDocument;
+            var ed = doc.Editor;
+
+            // 1. Chọn đối tượng cần soi
+            var peo = new PromptEntityOptions("\nChọn đối tượng để kiểm tra XData: ");
+            var per = ed.GetEntity(peo);
+            if (per.Status != PromptStatus.OK) return;
+
+            using (var tr = doc.Database.TransactionManager.StartTransaction())
             {
-                Application.ShowAlertDialog("Bạn cần đăng nhập trước!");
-                return;
+                var ent = (Entity)tr.GetObject(per.ObjectId, OpenMode.ForRead);
+
+                var rb = ent.GetXDataForApplication("MY_ROUTE_APP");
+
+                if (rb == null)
+                {
+                    Application.ShowAlertDialog("Đối tượng này KHÔNG CÓ dữ liệu của chương trình!");
+                }
+                else
+                {
+                    string info = "DỮ LIỆU TÌM THẤY:\n-----------------\n";
+                    foreach (var val in rb)
+                    {
+                        if (val.TypeCode == (short)DxfCode.ExtendedDataAsciiString)
+                        {
+                            info += val.Value.ToString() + "\n";
+                        }
+                    }
+                    Application.ShowAlertDialog(info);
+                }
+                tr.Commit();
             }
-
-            var vm = new CreateAttributeViewModel();
-            var view = new CreateAttributeView(vm);
-
-            Application.ShowModalWindow(view);
         }
     }
 }

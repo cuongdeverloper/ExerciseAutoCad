@@ -9,15 +9,14 @@ namespace Exercise.Views
         {
             InitializeComponent();
             this.DataContext = vm;
-
-            vm.HideWindowAction = () => this.Visibility = Visibility.Hidden;
-            vm.ShowWindowAction = () => this.Visibility = Visibility.Visible;
-
-            vm.CloseAction = (result) =>
+            if (vm.CloseAction == null)
             {
-                this.DialogResult = result;
-                this.Close();
-            };
+                vm.CloseAction = (result) =>
+                {
+                    this.DialogResult = result;
+                    this.Close();
+                };
+            }
         }
     }
 }

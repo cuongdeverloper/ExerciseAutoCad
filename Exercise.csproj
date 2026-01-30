@@ -125,6 +125,7 @@
     <Compile Include="Commands\AutoCADCommands.cs" />
     <Compile Include="Models\AttributeItemModel.cs" />
     <Compile Include="Models\CableItem.cs" />
+    <Compile Include="Models\ProjectModel.cs" />
     <Compile Include="Models\RouteModels.cs" />
     <Compile Include="Models\UserSession.cs" />
     <Compile Include="MVVM\RelayCommand.cs" />
@@ -135,6 +136,7 @@
     <Compile Include="ViewModels\CreateAttributeViewModel.cs" />
     <Compile Include="ViewModels\CreateRouteViewModel.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />
+    <Compile Include="ViewModels\SelectProjectViewModel.cs" />
     <Compile Include="Views\CreateAttributeView.xaml.cs">
       <DependentUpon>CreateAttributeView.xaml</DependentUpon>
     </Compile>
@@ -143,6 +145,9 @@
     </Compile>
     <Compile Include="Views\LoginView.xaml.cs">
       <DependentUpon>LoginView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\SelectProjectView.xaml.cs">
+      <DependentUpon>SelectProjectView.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -181,6 +186,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\LoginView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\SelectProjectView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
